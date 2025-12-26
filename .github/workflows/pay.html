@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment Follow-Up (3-Step)</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      background:#f8f9fa;
+      min-height:100vh;
+      padding:20px;
+      color:#2d3436;
+    }
+    .container{
+      max-width:920px;
+      margin:0 auto;
+      background:#fff;
+      border-radius:14px;
+      box-shadow:0 10px 28px rgba(0,0,0,.08);
+      overflow:hidden;
+    }
+    .header{
+      text-align:center;
+      padding:26px 18px;
+      border-bottom:1px solid #e9ecef;
+      background:#fff;
+    }
+    .header h1{font-size:22px;font-weight:800;margin-bottom:6px}
+    .header p{font-size:13px;color:#636e72}
+
+    .content{padding:22px}
+
+    /* stepper */
+    .stepper{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:10px;
+      margin-bottom:18px;
+    }
+    .step{
+      border:1px solid #e9ecef;
+      background:#f8f9fa;
+      border-radius:12px;
+      padding:12px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      color:#636e72;
+      font-size:13px;
+      transition:.25s ease;
+    }
+    .step strong{color:inherit}
+    .step.active{
+      border-color:#6c5ce7;
+      background:#f3f1ff;
+      color:#2d3436;
+      transform:translateY(-1px);
+    }
+    .badge{
+      width:26px;height:26px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:800;font-size:12px;
+      background:#fff;border:1px solid #e9ecef;color:#636e72;
+    }
+    .step.active .badge{
+      border-color:#6c5ce7;
+      color:#6c5ce7;
+      background:#fff;
+    }
+
+    /* pages */
+    .page{
+      display:none;
+      opacity:0;
+      transform:translateY(14px);
+    }
+    .page.active{
+      display:block;
+      animation:fadeSlide .45s ease forwards;
+    }
+    @keyframes fadeSlide{
+      to{opacity:1;transform:translateY(0)}
+    }
+
+    .card{
+      border:1px solid #e9ecef;
+      border-radius:14px;
+      padding:18px;
+      background:#fff;
+    }
+
+    label{display:block;font-weight:700;font-size:13px;margin-bottom:7px}
+    .required{color:#e17055}
+
+    input,textarea,select{
+      width:100%;
+      padding:12px 12px;
+      border:none;
+      border-radius:10px;
+      background:#f8f9fa;
+      font-size:14px;
+      outline:none;
+      transition:background .2s ease;
+      font-family:inherit;
+      color:#2d3436;
+    }
+    input:focus,textarea:focus,select:focus{background:#f1f3f4}
+    textarea{min-height:110px;resize:vertical}
+
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+    .row.one{grid-template-columns:1fr}
+    .hint{margin-top:6px;font-size:12px;color:#636e72}
+    .note{margin-top:10px;font-size:12px;color:#636e72}
+
+    .actions{
+      display:flex;gap:10px;margin-top:16px
+    }
+    .btn{
+      width:100%;
+      border:none;
+      border-radius:12px;
+      padding:14px 16px;
+      font-weight:800;
+      cursor:pointer;
+      transition:transform .07s ease, box-shadow .25s ease, opacity .2s ease;
+    }
+    .btn:active{transform:scale(.99)}
+    .btn.primary{background:#6c5ce7;color:#fff;box-shadow:0 10px 18px rgba(108,92,231,.18)}
+    .btn.primary:hover{box-shadow:0 12px 24px rgba(108,92,231,.28)}
+    .btn.secondary{background:#fff;color:#2d3436;border:1px solid #e9ecef}
+    .btn[disabled]{opacity:.6;cursor:not-allowed;box-shadow:none}
+
+    /* searchable name popup */
+    .picker{position:relative}
+    .picker-list{
+      position:absolute;left:0;right:0;top:calc(100% + 8px);
+      border:1px solid #e9ecef;
+      border-radius:14px;
+      background:#fff;
+      box-shadow:0 14px 30px rgba(0,0,0,.14);
+      max-height:280px;
+      overflow:auto;
+      z-index:40;
+      display:none;
+    }
+    .picker-list.show{display:block;animation:pop .18s ease}
+    @keyframes pop{from{transform:scale(.98);opacity:0}to{transform:scale(1);opacity:1}}
+    .picker-item{
+      padding:12px 12px;
+      border-bottom:1px solid #f1f3f4;
+      cursor:pointer;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+    }
+    .picker-item:hover{background:#f8f9fa}
+    .picker-item small{color:#636e72;font-size:12px}
+
+    /* subscription list cards */
+    .sub-list{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+    .sub-item{
+      display:flex;gap:12px;align-items:flex-start;
+      padding:12px;border:1px solid #e9ecef;border-radius:14px;background:#fff;
+      transition:.18s ease;
+    }
+    .sub-item:hover{transform:translateY(-1px)}
+    .sub-item input[type="radio"]{
+      width:18px;height:18px;margin-top:2px;accent-color:#6c5ce7;flex:0 0 auto;
+    }
+    .sub-meta{flex:1}
+    .sub-title{font-weight:800;margin-bottom:4px}
+    .sub-amount{color:#6c5ce7;font-weight:900;font-size:13px}
+
+    /* toast/alerts */
+    .alert{
+      display:none;
+      margin-top:14px;
+      padding:12px 12px;
+      border-radius:14px;
+      font-weight:700;
+      font-size:13px;
+      animation:fadeSlide .35s ease forwards;
+    }
+    .alert.ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+    .alert.err{background:#fff1f2;border:1px solid #fecdd3;color:#9f1239}
+
+    /* confirmation */
+    .check{
+      width:64px;height:64px;border-radius:18px;
+      display:flex;align-items:center;justify-content:center;
+      background:#f3f1ff;border:1px solid #e9ecef;margin:0 auto 12px;
+      color:#6c5ce7;font-size:30px;font-weight:900;
+      animation:pop .22s ease;
+    }
+    .summary{
+      margin-top:12px;
+      border:1px solid #e9ecef;
+      border-radius:14px;
+      padding:14px;
+      background:#fff;
+    }
+    .summary-row{
+      display:flex;justify-content:space-between;gap:12px;
+      padding:10px 0;border-bottom:1px solid #f1f3f4;
+      font-size:13px;
+    }
+    .summary-row:last-child{border-bottom:none}
+    .summary-row span:first-child{color:#636e72}
+    .summary-row span:last-child{font-weight:800}
+
+    .small{font-size:12px;color:#636e72;text-align:center;margin-top:8px}
+
+    @media (max-width:780px){
+      .row{grid-template-columns:1fr}
+      .content{padding:16px}
+      .stepper{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>PAYMENT FOLLOW-UP</h1>
+      <p>Step through the form to confirm payment and upload proof.</p>
+    </div>
+
+    <div class="content">
+      <div class="stepper">
+        <div class="step active" id="badge1"><strong>1. Select Name</strong><div class="badge">1</div></div>
+        <div class="step" id="badge2"><strong>2. Select & Upload</strong><div class="badge">2</div></div>
+        <div class="step" id="badge3"><strong>3. Confirmation</strong><div class="badge">3</div></div>
+      </div>
+
+      <!-- PAGE 1 -->
+      <div class="page active" id="page1">
+        <div class="card">
+          <div class="row one">
+            <div class="form-group">
+              <label for="nameSearch">Select Your Name <span class="required">*</span></label>
+              <div class="picker">
+                <input id="nameSearch" type="text" placeholder="Type to search..." autocomplete="off">
+                <div class="picker-list" id="nameList"></div>
+              </div>
+              <div class="hint">Click your name from the popup list.</div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="form-group">
+              <label>Selected Name</label>
+              <input id="selectedName" type="text" readonly placeholder="No name selected yet">
+            </div>
+            <div class="form-group">
+              <label for="ref">Phone / Reference (Optional)</label>
+              <input id="ref" type="text" placeholder="e.g. +2547... / M-Pesa ref">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" id="toPage2" disabled>Next</button>
+          </div>
+
+          <div class="alert err" id="p1Err"></div>
+        </div>
+      </div>
+
+      <!-- PAGE 2 -->
+      <div class="page" id="page2">
+        <div class="card">
+          <form id="paymentForm">
+            <div class="row">
+              <div class="form-group">
+                <label>Client Name</label>
+                <input id="clientName" name="clientName" readonly>
+              </div>
+              <div class="form-group">
+                <label>Phone/Reference</label>
+                <input id="clientRef" name="clientRef" readonly>
+              </div>
+            </div>
+
+            <div class="row one">
+              <div class="form-group">
+                <label>Select Subscription Paid <span class="required">*</span></label>
+                <div class="sub-list" id="subsContainer"></div>
+                <div class="note">Choose the exact subscription you paid for.</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="form-group">
+                <label for="amountShown">Amount</label>
+                <input id="amountShown" name="amountShown" readonly placeholder="Select subscription to view amount">
+              </div>
+              <div class="form-group">
+                <label for="proof">Attach Proof <span class="required">*</span></label>
+                <input id="proof" name="proof" type="file" accept=".pdf,.jpg,.jpeg,.png" required>
+                <div class="hint">Accepted: PDF, JPG, PNG</div>
+              </div>
+            </div>
+
+            <div class="row one">
+              <div class="form-group">
+                <label for="notes">Notes (Optional)</label>
+                <textarea id="notes" name="notes" maxlength="300" placeholder="Any additional details about the payment..."></textarea>
+                <div class="hint"><span id="charCount">0</span>/300</div>
+              </div>
+            </div>
+
+            <input type="hidden" name="subscriptionName" id="subscriptionName">
+            <input type="hidden" name="subscriptionAmount" id="subscriptionAmount">
+            <input type="hidden" name="submittedAt" id="submittedAt">
+
+            <div class="actions">
+              <button type="button" class="btn secondary" id="backTo1">Back</button>
+              <button type="submit" class="btn primary" id="submitBtn">Submit</button>
+            </div>
+
+            <div class="alert err" id="p2Err"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- PAGE 3 (CONFIRMATION) -->
+      <div class="page" id="page3">
+        <div class="card" style="text-align:center;">
+          <div class="check">✓</div>
+          <h2 style="font-size:18px;font-weight:900;margin-bottom:6px;">Submission Received</h2>
+          <p style="font-size:13px;color:#636e72;margin-bottom:10px;">
+            Thank you. Your payment proof has been submitted successfully.
+          </p>
+
+          <div class="summary" id="summaryBox"></div>
+
+          <div class="small" id="confirmTime"></div>
+
+          <div class="actions" style="margin-top:14px;">
+            <button class="btn secondary" id="newSubmission">Submit Another</button>
+          </div>
+
+          <div class="alert err" id="p3Err"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ✅ Webhook URL (same as you requested)
+    const WEBHOOK_URL = "https://l3j2qk3a.rcsrv.net/webhook/payment upload";
+
+    // ✅ Demo data (replace with your real subscriber list)
+    const PEOPLE = [
+      { name: "John Doe", subscriptions: [
+        { label: "DCash Premium", amount: "KES 1,500" },
+        { label: "Signals Monthly", amount: "KES 2,500" },
+      ]},
+      { name: "Mary Wanjiku", subscriptions: [
+        { label: "DCash Standard", amount: "KES 800" },
+        { label: "Education Package", amount: "KES 1,000" },
+        { label: "VIP Support", amount: "KES 3,000" },
+      ]},
+      { name: "Brian Otieno", subscriptions: [
+        { label: "Signals Weekly", amount: "KES 700" },
+        { label: "VIP Support", amount: "KES 3,000" },
+      ]},
+    ];
+
+    // --- Elements
+    const badge1 = document.getElementById("badge1");
+    const badge2 = document.getElementById("badge2");
+    const badge3 = document.getElementById("badge3");
+
+    const page1 = document.getElementById("page1");
+    const page2 = document.getElementById("page2");
+    const page3 = document.getElementById("page3");
+
+    const p1Err = document.getElementById("p1Err");
+    const p2Err = document.getElementById("p2Err");
+    const p3Err = document.getElementById("p3Err");
+
+    const nameSearch = document.getElementById("nameSearch");
+    const nameList = document.getElementById("nameList");
+    const selectedName = document.getElementById("selectedName");
+    const refInput = document.getElementById("ref");
+    const toPage2 = document.getElementById("toPage2");
+
+    const clientName = document.getElementById("clientName");
+    const clientRef = document.getElementById("clientRef");
+
+    const subsContainer = document.getElementById("subsContainer");
+    const amountShown = document.getElementById("amountShown");
+    const subscriptionName = document.getElementById("subscriptionName");
+    const subscriptionAmount = document.getElementById("subscriptionAmount");
+    const submittedAt = document.getElementById("submittedAt");
+
+    const notes = document.getElementById("notes");
+    const charCount = document.getElementById("charCount");
+    const submitBtn = document.getElementById("submitBtn");
+
+    const backTo1 = document.getElementById("backTo1");
+
+    const summaryBox = document.getElementById("summaryBox");
+    const confirmTime = document.getElementById("confirmTime");
+    const newSubmission = document.getElementById("newSubmission");
+
+    const paymentForm = document.getElementById("paymentForm");
+
+    let chosenPerson = null;
+
+    // --- Helpers
+    function setStep(step){
+      // badges
+      [badge1,badge2,badge3].forEach(b=>b.classList.remove("active"));
+      if(step===1) badge1.classList.add("active");
+      if(step===2) badge2.classList.add("active");
+      if(step===3) badge3.classList.add("active");
+
+      // pages
+      [page1,page2,page3].forEach(p=>p.classList.remove("active"));
+      if(step===1) page1.classList.add("active");
+      if(step===2) page2.classList.add("active");
+      if(step===3) page3.classList.add("active");
+
+      // errors
+      p1Err.style.display="none";
+      p2Err.style.display="none";
+      p3Err.style.display="none";
+    }
+
+    function showError(el, msg){
+      el.textContent = msg;
+      el.style.display = "block";
+    }
+
+    function renderNameList(filter=""){
+      const q = filter.trim().toLowerCase();
+      const matches = PEOPLE.filter(p => p.name.toLowerCase().includes(q));
+      nameList.innerHTML = "";
+
+      if(matches.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "picker-item";
+        empty.innerHTML = `<div>No matches found</div>`;
+        nameList.appendChild(empty);
+        return;
+      }
+
+      matches.forEach(p=>{
+        const item = document.createElement("div");
+        item.className = "picker-item";
+        item.innerHTML = `<div>${p.name}</div><small>${p.subscriptions.length} subscription(s)</small>`;
+        item.addEventListener("click", ()=>{
+          chosenPerson = p;
+          selectedName.value = p.name;
+          nameSearch.value = p.name;
+          nameList.classList.remove("show");
+          toPage2.disabled = false;
+        });
+        nameList.appendChild(item);
+      });
+    }
+
+    // name search interactions
+    nameSearch.addEventListener("focus", ()=>{
+      renderNameList(nameSearch.value);
+      nameList.classList.add("show");
+    });
+    nameSearch.addEventListener("input", ()=>{
+      renderNameList(nameSearch.value);
+      nameList.classList.add("show");
+      // require click selection
+      toPage2.disabled = !(chosenPerson && selectedName.value === chosenPerson.name);
+    });
+    document.addEventListener("click", (e)=>{
+      const picker = nameSearch.closest(".picker");
+      if(!picker.contains(e.target)) nameList.classList.remove("show");
+    });
+
+    function renderSubscriptions(subs){
+      subsContainer.innerHTML = "";
+      subs.forEach(s=>{
+        const label = document.createElement("label");
+        label.className = "sub-item";
+
+        const r = document.createElement("input");
+        r.type = "radio";
+        r.name = "subChoice";
+        r.value = s.label;
+        r.required = true;
+
+        r.addEventListener("change", ()=>{
+          amountShown.value = s.amount;
+          subscriptionName.value = s.label;
+          subscriptionAmount.value = s.amount;
+        });
+
+        const meta = document.createElement("div");
+        meta.className = "sub-meta";
+        meta.innerHTML = `
+          <div class="sub-title">${s.label}</div>
+          <div class="sub-amount">${s.amount}</div>
+        `;
+
+        label.appendChild(r);
+        label.appendChild(meta);
+        subsContainer.appendChild(label);
+      });
+    }
+
+    // page 1 -> page 2
+    toPage2.addEventListener("click", ()=>{
+      if(!chosenPerson){
+        showError(p1Err, "Please select your name from the popup list.");
+        return;
+      }
+      clientName.value = chosenPerson.name;
+      clientRef.value = refInput.value || "";
+      renderSubscriptions(chosenPerson.subscriptions);
+
+      // reset page2 fields
+      amountShown.value = "";
+      subscriptionName.value = "";
+      subscriptionAmount.value = "";
+      document.getElementById("proof").value = "";
+      notes.value = "";
+      charCount.textContent = "0";
+
+      setStep(2);
+    });
+
+    // back to page 1
+    backTo1.addEventListener("click", ()=>{
+      setStep(1);
+    });
+
+    // notes counter
+    notes.addEventListener("input", ()=>{ charCount.textContent = notes.value.length; });
+
+    // submit (multipart/form-data + file)
+    paymentForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+
+      if(!subscriptionName.value || !subscriptionAmount.value){
+        showError(p2Err, "Please select a subscription.");
+        return;
+      }
+      const proofFile = document.getElementById("proof").files[0];
+      if(!proofFile){
+        showError(p2Err, "Please attach payment proof (PDF/JPG/PNG).");
+        return;
+      }
+
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = "Submitting...";
+      submitBtn.disabled = true;
+
+      try{
+        const nowIso = new Date().toISOString();
+        submittedAt.value = nowIso;
+
+        const fd = new FormData();
+        fd.append("clientName", clientName.value);
+        fd.append("clientRef", clientRef.value);
+        fd.append("subscriptionName", subscriptionName.value);
+        fd.append("subscriptionAmount", subscriptionAmount.value);
+        fd.append("notes", notes.value || "");
+        fd.append("submittedAt", nowIso);
+        fd.append("proof", proofFile);
+
+        const res = await fetch(WEBHOOK_URL, { method:"POST", body: fd });
+
+        if(!res.ok){
+          showError(p2Err, "Failed to submit. Please try again.");
+          return;
+        }
+
+        // Build confirmation summary
+        summaryBox.innerHTML = `
+          <div class="summary-row"><span>Name</span><span>${escapeHtml(clientName.value)}</span></div>
+          <div class="summary-row"><span>Reference</span><span>${escapeHtml(clientRef.value || "—")}</span></div>
+          <div class="summary-row"><span>Subscription</span><span>${escapeHtml(subscriptionName.value)}</span></div>
+          <div class="summary-row"><span>Amount</span><span>${escapeHtml(subscriptionAmount.value)}</span></div>
+          <div class="summary-row"><span>Proof File</span><span>${escapeHtml(proofFile.name)}</span></div>
+        `;
+        confirmTime.textContent = "Submitted at: " + new Date(nowIso).toLocaleString();
+
+        setStep(3);
+
+      }catch(err){
+        showError(p2Err, "Network error — please check your connection.");
+      }finally{
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+
+    // new submission (reset everything)
+    newSubmission.addEventListener("click", ()=>{
+      chosenPerson = null;
+      nameSearch.value = "";
+      selectedName.value = "";
+      refInput.value = "";
+      toPage2.disabled = true;
+
+      // reset page2 form
+      paymentForm.reset();
+      subsContainer.innerHTML = "";
+      amountShown.value = "";
+      subscriptionName.value = "";
+      subscriptionAmount.value = "";
+      charCount.textContent = "0";
+
+      setStep(1);
+    });
+
+    // simple escape for summary
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, s => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+      }[s]));
+    }
+  </script>
+</body>
+</html>
